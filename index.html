@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El oráculo vivo · Lector estructural de las 4096 lecturas</title>
+<style>
+  :root{ --ink:#20242b; --parch:#f4ecd8; --parch2:#efe6cf; --line:#cdbb90;
+         --crim:#9b2d2d; --teal:#2b6b6b; --gold:#b08a2e; --mut:#8a7f63; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--parch);color:var(--ink);
+       font-family:Georgia,'Times New Roman',serif;line-height:1.5}
+  .wrap{max-width:1040px;margin:0 auto;padding:26px 20px 80px}
+  h1{font-size:30px;margin:0 0 2px;letter-spacing:.5px}
+  .sub{color:var(--mut);font-style:italic;margin:0 0 20px}
+  h2{font-size:19px;border-bottom:1px solid var(--line);padding-bottom:6px;margin:30px 0 14px;letter-spacing:.5px}
+  .card{background:var(--parch2);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin-bottom:16px}
+  /* input */
+  .lines{display:flex;flex-direction:column;gap:7px}
+  .lrow{display:flex;align-items:center;gap:12px}
+  .llab{width:70px;color:var(--mut);font-size:13px;text-align:right}
+  .opts{display:flex;gap:6px;flex-wrap:wrap}
+  .opt{cursor:pointer;border:1px solid var(--line);background:#fbf6e8;border-radius:6px;
+       padding:5px 9px;font-size:13px;color:var(--ink);user-select:none;min-width:104px;text-align:center}
+  .opt.sel{background:var(--ink);color:var(--parch);border-color:var(--ink)}
+  .opt.sel.mv{background:var(--crim);border-color:var(--crim)}
+  .btns{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  button{cursor:pointer;font-family:inherit;font-size:14px;border:1px solid var(--ink);
+          background:var(--ink);color:var(--parch);border-radius:6px;padding:8px 16px}
+  button.ghost{background:transparent;color:var(--ink)}
+  /* hexagram figure */
+  .hx{display:inline-flex;flex-direction:column;gap:6px;align-items:center}
+  .hln{display:flex;align-items:center;justify-content:center;position:relative}
+  .bar{background:var(--ink)}
+  .mvmark{position:absolute;right:-20px;color:var(--crim);font-size:15px;font-weight:bold}
+  .figpair{display:flex;align-items:center;justify-content:center;gap:26px;flex-wrap:wrap}
+  .fig{ text-align:center;min-width:150px}
+  .fig .nm{font-size:15px;margin-top:8px}
+  .fig .no{font-size:13px;color:var(--mut)}
+  .arrow{font-size:34px;color:var(--gold)}
+  .tag{display:inline-block;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .st{background:#fbf6e8;border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+  .st .k{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--mut)}
+  .st .v{font-size:17px;margin-top:3px}
+  .narr{margin-top:6px;font-size:15px;line-height:1.6}
+  .em{color:var(--crim);font-style:italic}
+  .lineread{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+  .lr{font-size:14.5px;line-height:1.55;margin:8px 0;padding-left:12px;border-left:3px solid var(--gold)}
+  .fine{font-size:11.5px;color:var(--mut);font-style:italic;margin-top:10px}
+  /* dynamics */
+  .track{position:relative;height:120px;margin:10px 0 4px}
+  svg{max-width:100%}
+  .legend{font-size:12px;color:var(--mut);display:flex;gap:18px;flex-wrap:wrap;margin-top:4px}
+  .dotL{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:5px}
+  .dyn2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+  .dyncol .h{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+  .tri{font-size:15px;margin:2px 0}
+  .tri b{font-family:inherit}
+  /* web */
+  .webwrap{overflow-x:auto}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .tabbtn{background:transparent;color:var(--mut);border:1px solid var(--line);border-bottom:none;
+          border-radius:8px 8px 0 0;padding:9px 18px;font-size:14px;cursor:pointer;font-family:inherit}
+  .tabbtn.active{background:var(--parch2);color:var(--ink);font-weight:bold}
+  .fromto{display:flex;align-items:flex-start;justify-content:center;gap:22px;flex-wrap:wrap}
+  .ftcol{text-align:center;min-width:210px}
+  .ftcol label{display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+  .ftcol select{font-family:inherit;font-size:14px;padding:7px;border:1px solid var(--line);border-radius:6px;background:#fbf6e8;width:100%;max-width:250px}
+  #figFrom,#figTo{margin-top:14px;display:flex;justify-content:center}
+  .ftarrow{font-size:30px;color:var(--gold);align-self:center;padding-top:34px}
+  .route{margin-top:14px;border-top:1px dashed var(--line);padding-top:10px}
+  .routerow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center}
+  .rstep{text-align:center} .rstep .no{font-size:11px;color:var(--mut);margin-top:4px}
+  .rar{color:var(--gold);font-size:22px}
+  .modes{margin-top:12px;display:flex;gap:20px;flex-wrap:wrap;font-size:14px;color:var(--ink)}
+  .modes label{cursor:pointer}
+  .foot{margin-top:40px;font-size:12px;color:var(--mut);text-align:center}
+  @media(max-width:560px){ .dyn2{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>El oráculo vivo</h1>
+  <p class="sub">Lector estructural de las 4096 lecturas — tu situación HOY en el cosmos y tu futuro en la telaraña de la vida.</p>
+
+  <div class="tabs">
+    <button class="tabbtn active" id="tb-consulta" onclick="showTab('consulta')">Consulta oracular</button>
+    <button class="tabbtn" id="tb-caminos" onclick="showTab('caminos')">Los caminos · de un hexagrama a otro</button>
+  </div>
+
+  <div id="tab-consulta">
+    <div class="card">
+      <div class="tag">Tu tirada · márcala desde la línea 1 (abajo) hacia la 6 (arriba)</div>
+      <div class="lines" id="lines"></div>
+      <div class="btns">
+        <button onclick="randomYarrow()">Consultar (milenrama)</button>
+        <button class="ghost" onclick="randomCoins()">Consultar (monedas)</button>
+        <button class="ghost" onclick="setExample()">Ejemplo</button>
+        <button class="ghost" onclick="limpiar()">Limpiar</button>
+      </div>
+    </div>
+    <div id="out"></div>
+  </div>
+
+  <div id="tab-caminos" style="display:none">
+    <div class="card">
+      <div class="tag">¿Cómo ir de un hexagrama a otro? · la mutación creativa (Schoenholtz)</div>
+      <div class="fromto">
+        <div class="ftcol"><label>Desde · dónde estás</label><select id="selFrom"></select><div id="figFrom"></div></div>
+        <div class="ftarrow">→</div>
+        <div class="ftcol"><label>Hasta · a dónde quieres ir</label><select id="selTo"></select><div id="figTo"></div></div>
+      </div>
+      <div class="btns">
+        <button class="ghost" onclick="useHoy()">Usar mi HOY como origen</button>
+        <button class="ghost" onclick="borrarCaminos()">Borrar</button>
+      </div>
+      <div class="modes">
+        <label><input type="radio" name="cmode" value="mut" checked onchange="setMode('mut')"> Mutación · voltear una línea</label>
+        <label><input type="radio" name="cmode" value="trans" onchange="setMode('trans')"> Transposición · subir/bajar líneas</label>
+      </div>
+    </div>
+    <div id="pathout"></div>
+  </div>
+
+  <p class="foot">Todo se calcula localmente en esta página, sin conexión. Codificación: yang = línea entera, yin = partida; se lee de abajo hacia arriba. 6 = yin mutante · 7 = yang quieto · 8 = yin quieto · 9 = yang mutante.</p>
+</div>
+
+<script>
+/* ---------- constants ---------- */
+const KW=[63,0,17,34,23,58,2,16,55,59,7,56,61,47,4,8,25,38,3,48,41,37,32,1,57,39,33,30,18,45,28,14,
+          60,15,40,5,53,43,20,10,35,49,31,62,24,6,26,22,29,46,9,36,52,11,13,44,54,27,50,19,51,12,21,42];
+const val2pos=v=>KW.indexOf(v)+1;
+const NAME={1:["Qián","Lo Creativo"],2:["Kūn","Lo Receptivo"],3:["Zhūn","La Dificultad Inicial"],4:["Méng","La Necedad Juvenil"],5:["Xū","La Espera"],6:["Sòng","El Conflicto"],7:["Shī","El Ejército"],8:["Bǐ","La Solidaridad"],9:["Xiǎo Chù","La Fuerza Domesticadora de lo Pequeño"],10:["Lǚ","El Porte"],11:["Tài","La Paz"],12:["Pǐ","El Estancamiento"],13:["Tóng Rén","La Comunidad"],14:["Dà Yǒu","La Posesión de lo Grande"],15:["Qiān","La Modestia"],16:["Yù","El Entusiasmo"],17:["Suí","El Seguimiento"],18:["Gǔ","El Trabajo en lo Echado a Perder"],19:["Lín","El Acercamiento"],20:["Guān","La Contemplación"],21:["Shì Kè","La Mordedura Tajante"],22:["Bì","La Gracia"],23:["Bō","La Desintegración"],24:["Fù","El Retorno"],25:["Wú Wàng","La Inocencia"],26:["Dà Chù","La Fuerza Domesticadora de lo Grande"],27:["Yí","La Nutrición"],28:["Dà Guò","La Preponderancia de lo Grande"],29:["Kǎn","Lo Abismal (Agua)"],30:["Lí","Lo Adherente (Fuego)"],31:["Xián","El Influjo"],32:["Héng","La Duración"],33:["Dùn","La Retirada"],34:["Dà Zhuàng","El Poder de lo Grande"],35:["Jìn","El Progreso"],36:["Míng Yí","El Oscurecimiento de la Luz"],37:["Jiā Rén","El Clan"],38:["Kuí","El Antagonismo"],39:["Jiǎn","El Impedimento"],40:["Xiè","La Liberación"],41:["Sǔn","La Merma"],42:["Yì","El Aumento"],43:["Guài","La Resolución"],44:["Gòu","El Ir al Encuentro"],45:["Cuì","La Reunión"],46:["Shēng","La Subida"],47:["Kùn","La Opresión"],48:["Jǐng","El Pozo"],49:["Gé","La Revolución"],50:["Dǐng","El Caldero"],51:["Zhèn","Lo Suscitativo (Trueno)"],52:["Gèn","El Aquietamiento (Montaña)"],53:["Jiàn","La Evolución"],54:["Guī Mèi","La Muchacha que se Casa"],55:["Fēng","La Plenitud"],56:["Lǚ","El Andariego"],57:["Xùn","Lo Suave (Viento)"],58:["Duì","Lo Sereno (Lago)"],59:["Huàn","La Dispersión"],60:["Jié","La Restricción"],61:["Zhōng Fú","La Verdad Interior"],62:["Xiǎo Guò","La Preponderancia de lo Pequeño"],63:["Jì Jì","Después de la Consumación"],64:["Wèi Jì","Antes de la Consumación"]};
+// trigram value (bit0=bottom): dynamics from the systems-theory arrangement
+const TRI={0:["Kun","☷","Tierra"],1:["Zhen","☳","Trueno"],2:["Kan","☵","Agua"],3:["Dui","☱","Lago"],4:["Gen","☶","Montaña"],5:["Li","☲","Fuego"],6:["Xun","☴","Viento"],7:["Qian","☰","Cielo"]};
+const CYCLE=[0,2,1,7,5,3,6,4];               // phase order Kun,Kan,Zhen,Qian,Li,Dui,Xun,Gen
+const PHASE={}; CYCLE.forEach((v,i)=>PHASE[v]=i);
+const QUAL={0:"frío",2:"inestable",1:"en ascenso",7:"caliente",5:"estable",3:"abierto",6:"en descenso",4:"cerrándose"};
+const SEASON={0:"pleno invierno",2:"temprana primavera",1:"primavera",7:"inicio de verano",5:"verano",3:"inicio de otoño",6:"otoño",4:"inicio de invierno"};
+
+/* ---------- math ---------- */
+function nuclear(v){const L=i=>(v>>i)&1; const lo=L(1)|(L(2)<<1)|(L(3)<<2); const up=L(2)|(L(3)<<1)|(L(4)<<2); return lo|(up<<3);}
+function analyze(r){ // r: [l1..l6] each in {6,7,8,9}
+  const yang=x=>x===7||x===9, mov=x=>x===6||x===9;
+  let prim=0; r.forEach((x,i)=>{ if(yang(x)) prim|=(1<<i); });
+  const M=[]; r.forEach((x,i)=>{ if(mov(x)) M.push(i); });
+  let trans=prim; M.forEach(i=>trans^=(1<<i));
+  const k=popcount(prim), D=M.length;
+  const n9=r.filter(x=>x===9).length, n6=r.filter(x=>x===6).length;
+  return {prim,trans,M,k,D,n9,n6,B:n9-n6};
+}
+function popcount(v){let c=0;while(v){c+=v&1;v>>=1;}return c;}
+function fact(n){let f=1;for(let i=2;i<=n;i++)f*=i;return f;}
+function cellprob(k,D){ // milenrama % for class (k,D)
+  const W={6:1/16,7:5/16,8:7/16,9:3/16}; let s=0;
+  for(let n6=0;n6<=6;n6++)for(let n7=0;n7<=6-n6;n7++)for(let n8=0;n8<=6-n6-n7;n8++){
+    const n9=6-n6-n7-n8; if(n9<0)continue;
+    if(n7+n9===k && n6+n9===D){
+      s+= fact(6)/(fact(n6)*fact(n7)*fact(n8)*fact(n9))*Math.pow(W[6],n6)*Math.pow(W[7],n7)*Math.pow(W[8],n8)*Math.pow(W[9],n9);
+    }
+  } return 100*s;
+}
+
+/* ---------- hexagram drawing ---------- */
+function hexHTML(value,{scale=1,moving=[]}={}){
+  const w=64*scale, th=6*scale, gap=6*scale, lh=12*scale, gm=(14*scale);
+  let rows='';
+  for(let i=5;i>=0;i--){ // line6 top -> line1 bottom
+    const yang=(value>>i)&1;
+    const mv=moving.includes(i)?`<span class="mvmark" style="right:${-18*scale}px">✳</span>`:'';
+    if(yang) rows+=`<div class="hln" style="height:${lh}px"><span class="bar" style="width:${w}px;height:${th}px"></span>${mv}</div>`;
+    else{ const half=(w-gm)/2; rows+=`<div class="hln" style="height:${lh}px"><span class="bar" style="width:${half}px;height:${th}px"></span><span style="width:${gm}px"></span><span class="bar" style="width:${half}px;height:${th}px"></span>${mv}</div>`; }
+  }
+  return `<div class="hx">${rows}</div>`;
+}
+function figBlock(value,movingBits,label){
+  const p=val2pos(value), n=NAME[p];
+  return `<div class="fig"><div class="tag">${label}</div>${hexHTML(value,{scale:1,moving:movingBits})}
+    <div class="nm"><b>${p}. ${n[0]}</b></div><div class="no">${n[1]}</div></div>`;
+}
+
+/* ---------- dynamics track: the real sine wave of the life-cycle ---------- */
+function dynTrack(prim,trans){
+  const lo=v=>v&7, up=v=>(v>>3)&7;
+  const W=940,H=190,padx=48,midY=96,amp=54;
+  const X=ph=>padx+ph*((W-2*padx)/7);
+  const Y=ph=>midY - amp*Math.sin(2*Math.PI*(ph-3)/8);   // trough near Kun, peak near Dui
+  let d=''; for(let t=-0.6;t<=7.6;t+=0.08){ d+=(d===''?'M':'L')+X(t).toFixed(1)+' '+Y(t).toFixed(1)+' '; }
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">`;
+  s+=`<defs>
+      <marker id="arin" markerWidth="10" markerHeight="10" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#2b6b6b"/></marker>
+      <marker id="arout" markerWidth="10" markerHeight="10" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#9b2d2d"/></marker></defs>`;
+  s+=`<line x1="${padx-6}" y1="${midY}" x2="${W-padx+6}" y2="${midY}" stroke="#e2d6b4" stroke-width="1" stroke-dasharray="3 4"/>`;
+  s+=`<path d="${d}" fill="none" stroke="#c9b98e" stroke-width="2.5"/>`;
+  CYCLE.forEach((v,i)=>{ const x=X(i),y=Y(i);
+    s+=`<circle cx="${x}" cy="${y}" r="3.2" fill="#b08a2e"/>`;
+    s+=`<text x="${x}" y="${y-12}" text-anchor="middle" font-size="17" fill="#20242b">${TRI[v][1]}</text>`;
+    s+=`<text x="${x}" y="${H-8}" text-anchor="middle" font-size="10.5" fill="#8a7f63">${QUAL[v]}</text>`;
+  });
+  const piIn=PHASE[lo(prim)],tiIn=PHASE[lo(trans)],piOut=PHASE[up(prim)],tiOut=PHASE[up(trans)];
+  const arrow=(a,b,col,mk)=>{ const x1=X(a),y1=Y(a),x2=X(b),y2=Y(b);
+    if(Math.abs(a-b)<0.01) return '';
+    const mx=(x1+x2)/2, my=Math.min(y1,y2)-22;
+    return `<path d="M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}" fill="none" stroke="${col}" stroke-width="2.4" marker-end="url(#${mk})"/>`; };
+  s+=arrow(piIn,tiIn,'#2b6b6b','arin');
+  s+=arrow(piOut,tiOut,'#9b2d2d','arout');
+  const dot=(ph,col,fill)=>`<circle cx="${X(ph)}" cy="${Y(ph)}" r="6.5" fill="${fill?col:'#f4ecd8'}" stroke="${col}" stroke-width="2.4"/>`;
+  s+=dot(piIn,'#2b6b6b',false)+dot(tiIn,'#2b6b6b',true);
+  s+=dot(piOut,'#9b2d2d',false)+dot(tiOut,'#9b2d2d',true);
+  s+=`</svg>`;
+  return s;
+}
+
+/* ---------- structural reading of each moving line (our own voice) ---------- */
+const POSMEAN={1:"la raíz: aún abajo, sin influencia todavía — la semilla del asunto",
+  2:"el centro del trigrama interior: el funcionario leal, el equilibrio de dentro",
+  3:"el umbral entre lo interior y lo exterior: posición de tránsito y de riesgo",
+  4:"junto al trono: el ministro, posición delicada, de servicio y cautela",
+  5:"el trono, centro del trigrama exterior: quien gobierna con justicia",
+  6:"la cima: lo ya colmado que empieza a retirarse — el sabio, o el exceso"};
+function lineReading(prim,pos,val){
+  const isYang=((prim>>(pos-1))&1)===1;
+  const central=(pos===2||pos===5);
+  const correct=(isYang===(pos%2===1));      // yang en impar, yin en par = 正
+  const partner=pos<=3?pos+3:pos-3;
+  const pYang=((prim>>(partner-1))&1)===1;
+  const responds=(isYang!==pYang);
+  const mut = val===9? "un <b>yang</b> viejo que se desborda y caerá a yin" : "un <b>yin</b> viejo que se colma y subirá a yang";
+  let t=`<div class="lr"><b>Línea ${pos}</b> — ${POSMEAN[pos]}. Es ${mut}`;
+  if(central) t+=`, y ocupa el <b>centro (中)</b> de su trigrama`;
+  t+=`. Está ${correct?'<b>en su lugar correcto (正)</b>':'fuera de su lugar (no 正)'}, y ${responds?`halla respuesta en la línea ${partner} <b>(應)</b>`:`no halla respuesta en la línea ${partner}`}.`;
+  if(pos===5) t+=` Es la línea soberana: la que rige la figura.`;
+  t+=` Al moverse, empuja el cambio hacia MAÑANA.</div>`;
+  return t;
+}
+
+/* ---------- the web (Boolean hypercube of moving lines) ---------- */
+function webSVG(prim,M){
+  const D=M.length;
+  if(D===0) return `<p class="narr">No hay líneas móviles: <span class="em">HOY es idéntico a MAÑANA</span>. La situación es estable, se sostiene sola y se lee entera en una sola figura.</p>`;
+  // nodes = subsets of M; rank = popcount
+  const subsets=[]; for(let m=0;m<(1<<D);m++)subsets.push(m);
+  const byRank={}; subsets.forEach(m=>{const r=popcount(m);(byRank[r]=byRank[r]||[]).push(m);});
+  const colGap=Math.max(150,Math.min(200,760/D)), rowGap=64, padx=70, padtop=40;
+  const maxRow=Math.max(...Object.values(byRank).map(a=>a.length));
+  const W=padx*2+D*colGap, H=padtop*2+ (maxRow-1)*rowGap + 40;
+  const pos={};
+  for(let r=0;r<=D;r++){ const arr=byRank[r]; arr.forEach((m,idx)=>{
+      const y=H/2 + (idx-(arr.length-1)/2)*rowGap; const x=padx+r*colGap; pos[m]=[x,y]; }); }
+  const val=m=>{let v=prim; M.forEach((li,j)=>{ if(m&(1<<j)) v^=(1<<li); }); return v;};
+  // canonical path subsets (activate bottom->top order of M sorted)
+  const order=M.map((li,j)=>j).sort((a,b)=>M[a]-M[b]);
+  const canon=new Set(); let cur=0; canon.add(0); order.forEach(j=>{cur|=(1<<j);canon.add(cur);});
+  const canonEdge=(a,b)=>canon.has(a)&&canon.has(b)&&popcount(b)===popcount(a)+1;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" preserveAspectRatio="xMinYMid meet">`;
+  // edges
+  subsets.forEach(a=>{ for(let j=0;j<D;j++){ if(!(a&(1<<j))){ const b=a|(1<<j);
+     const [x1,y1]=pos[a],[x2,y2]=pos[b]; const ce=canonEdge(a,b);
+     s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${ce?'#b08a2e':'#d9cba6'}" stroke-width="${ce?3:1.4}"/>`; }}});
+  // nodes: mini hexagram + number
+  subsets.forEach(m=>{ const [x,y]=pos[m]; const v=val(m),p=val2pos(v); const onp=canon.has(m);
+    s+=miniHex(x,y,v,onp);
+    s+=`<text x="${x}" y="${y+30}" text-anchor="middle" font-size="12" fill="${onp?'#9b2d2d':'#6a6047'}">${p}</text>`; });
+  s+=`</svg>`;
+  const paths=fact(D);
+  return `<div class="webwrap">${s}</div>
+    <p class="narr"><b>La telaraña</b> de esta lectura es un hipercubo de dimensión ${D}: <b>${1<<D} figuras</b> intermedias y <b>${paths} camino${paths>1?'s':''}</b> (los órdenes en que las líneas pueden activarse). En oro, el <span style="color:#b08a2e">camino canónico</span> —activar las líneas de abajo hacia arriba—. A la izquierda, HOY; a la derecha, MAÑANA.</p>`;
+}
+function miniHex(cx,cy,value,hl){
+  const w=40,th=3,gap=4,lh=6; let s='';
+  for(let i=5;i>=0;i--){ const yy=cy-16+ (5-i)*(lh+1); const yang=(value>>i)&1;
+    const col=hl?'#9b2d2d':'#20242b';
+    if(yang) s+=`<rect x="${cx-w/2}" y="${yy}" width="${w}" height="${th}" fill="${col}"/>`;
+    else{ const half=(w-gap)/2; s+=`<rect x="${cx-w/2}" y="${yy}" width="${half}" height="${th}" fill="${col}"/><rect x="${cx+gap/2}" y="${yy}" width="${half}" height="${th}" fill="${col}"/>`; }
+  }
+  if(hl) s=`<rect x="${cx-w/2-6}" y="${cy-22}" width="${w+12}" height="30" rx="4" fill="#fff5df" stroke="#b08a2e"/>`+s;
+  return s;
+}
+
+/* ---------- narrative ---------- */
+function narrative(A){
+  const lo=v=>v&7, up=v=>(v>>3)&7;
+  const di=PHASE[lo(A.trans)]-PHASE[lo(A.prim)], de=PHASE[up(A.trans)]-PHASE[up(A.prim)];
+  const dirLine = A.B>0? 'hacia el <span class="em">yin</span> (descarga de lo lleno)' : A.B<0? 'hacia el <span class="em">yang</span> (crecimiento de lo activo)' : 'en <span class="em">equilibrio</span> (sin sesgo de dirección)';
+  const move = w=> w<0? 'retrocede en el ciclo (se enfría / rebobina)': w>0? 'avanza en el ciclo (madura / se realiza)':'permanece en su fase';
+  let t = `Tu situación <b>HOY</b> es <b>${val2pos(A.prim)}. ${NAME[val2pos(A.prim)][0]}</b> — ${NAME[val2pos(A.prim)][1]}. `;
+  if(A.D===0){ t+='Ninguna línea tiembla: la situación es estable y no se mueve. HOY y mañana coinciden.'; return t; }
+  t+=`${A.D} línea${A.D>1?'s':''} en trance la empuja${A.D>1?'n':''} hacia <b>${val2pos(A.trans)}. ${NAME[val2pos(A.trans)][0]}</b> — ${NAME[val2pos(A.trans)][1]}, a ${A.D} paso${A.D>1?'s':''} sobre el mapa. `;
+  t+=`El cambio se inclina ${dirLine}. `;
+  t+=`En la dinámica de los trigramas, tu fase interior (de formación) ${move(di)}, y tu fase exterior (de realización) ${move(de)}.`;
+  return t;
+}
+
+/* ---------- OUR OWN dynamics: axial vs directional (structural, computed) ---------- */
+const AXIAL=new Set([0,2,5,7]);                 // Kun,Kan,Li,Qian — the palindromic (still) trigrams
+function mirror3(t){return ((t&1)<<2)|(t&2)|((t>>2)&1);}   // vertical flip of a trigram
+function triYang(t){return (t&1)+((t>>1)&1)+((t>>2)&1);}
+const AXIS={7:"eje Cielo–Tierra · yang puro",0:"eje Cielo–Tierra · yin puro",5:"eje Fuego–Agua · la luz",2:"eje Fuego–Agua · el peligro"};
+function triDesc(t){
+  const nm=`<b>${TRI[t][0]}</b> ${TRI[t][1]}`;
+  if(AXIAL.has(t)) return `${nm} — <b>axial</b> (polo anclado, en reposo: ${AXIS[t]})`;
+  return `${nm} — <b>direccional</b> (en movimiento, inclinado hacia su reverso ${TRI[mirror3(t)][0]} ${TRI[mirror3(t)][1]})`;
+}
+function axCol(label,v){ const lo=v&7,up=(v>>3)&7;
+  return `<div class="dyncol"><div class="h">${label}</div>
+    <div class="tri">interior · ${triDesc(lo)}</div>
+    <div class="tri">exterior · ${triDesc(up)}</div></div>`;
+}
+function axReading(prim,trans){
+  const lo=v=>v&7, up=v=>(v>>3)&7;
+  const di=triYang(lo(trans))-triYang(lo(prim)), de=triYang(up(trans))-triYang(up(prim));
+  const heat=d=> d>0?'se calienta (gana yang)':d<0?'se enfría (cede yang)':'conserva su temperatura';
+  const settle=(a,b)=> a&&!b?'se pone en marcha (de anclada a direccional)':!a&&b?'se asienta (de direccional a anclada)':a&&b?'permanece anclada en su polo':'sigue en movimiento';
+  const aIn0=AXIAL.has(lo(prim)),aIn1=AXIAL.has(lo(trans)),aOut0=AXIAL.has(up(prim)),aOut1=AXIAL.has(up(trans));
+  let t=`<p class="narr">Tu <b>fase interior</b> (formación) ${heat(di)} y ${settle(aIn0,aIn1)}. `;
+  t+=`Tu <b>fase exterior</b> (realización) ${heat(de)} y ${settle(aOut0,aOut1)}.`;
+  const tot=di+de;
+  t+= tot<0? ` En conjunto, el sistema <span class="em">se enfría hacia el yin</span> — la descarga de lo lleno.` :
+      tot>0? ` En conjunto, el sistema <span class="em">se calienta hacia el yang</span>.` :
+             ` En conjunto, conserva su equilibrio de yang.`;
+  return t+`</p>`;
+}
+function triSVG(cx,cy,t,col){ const w=30,th=4,lh=8; let s='';
+  for(let i=2;i>=0;i--){ const yy=cy-8+(2-i)*lh; const yang=(t>>i)&1;
+    if(yang) s+=`<rect x="${cx-w/2}" y="${yy}" width="${w}" height="${th}" fill="${col}"/>`;
+    else{ const half=(w-8)/2; s+=`<rect x="${cx-w/2}" y="${yy}" width="${half}" height="${th}" fill="${col}"/><rect x="${cx+4}" y="${yy}" width="${half}" height="${th}" fill="${col}"/>`; }
+  } return s;
+}
+function axMap(prim,trans){
+  const W=880,H=310,padx=95,colGap=(W-2*padx)/3,yMid=150,rowGap=82;
+  const P={0:[0,0],2:[1,0],1:[1,-1],4:[1,1],5:[2,0],3:[2,-1],6:[2,1],7:[3,0]};
+  const X=c=>padx+c*colGap, Y=r=>yMid+r*rowGap;
+  const at=t=>{const[c,r]=P[t];return [X(c),Y(r)];};
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">`;
+  s+=`<defs><marker id="arin2" markerWidth="10" markerHeight="10" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#2b6b6b"/></marker>
+      <marker id="arout2" markerWidth="10" markerHeight="10" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#9b2d2d"/></marker></defs>`;
+  s+=`<text x="${W/2}" y="20" text-anchor="middle" font-size="11" fill="#8a7f63">fila central = axial (anclado) · arriba y abajo = direccional (en movimiento)</text>`;
+  s+=`<text x="${padx-20}" y="${H-8}" font-size="11" fill="#8a7f63">← más yin</text>`;
+  s+=`<text x="${W-padx+20}" y="${H-8}" text-anchor="end" font-size="11" fill="#8a7f63">más yang →</text>`;
+  [[1,4],[3,6]].forEach(([a,b])=>{ const[x1,y1]=at(a),[x2,y2]=at(b); s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#e2d6b4" stroke-width="1.5" stroke-dasharray="2 5"/>`; });
+  Object.keys(P).forEach(k=>{ const t=+k,[x,y]=at(t),ax=AXIAL.has(t);
+    if(ax) s+=`<circle cx="${x}" cy="${y}" r="30" fill="#fbf6e8" stroke="#cdbb90"/>`;
+    s+=triSVG(x,y,t,'#20242b');
+    s+=`<text x="${x}" y="${y+30}" text-anchor="middle" font-size="12" fill="${ax?'#b08a2e':'#8a7f63'}">${TRI[t][0]}</text>`; });
+  const lo=v=>v&7,up=v=>(v>>3)&7;
+  const arrow=(t1,t2,col,mk)=>{ if(t1===t2)return ''; const[x1,y1]=at(t1),[x2,y2]=at(t2),mx=(x1+x2)/2,my=Math.min(y1,y2)-30; return `<path d="M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}" fill="none" stroke="${col}" stroke-width="2.3" marker-end="url(#${mk})"/>`; };
+  s+=arrow(lo(prim),lo(trans),'#2b6b6b','arin2')+arrow(up(prim),up(trans),'#9b2d2d','arout2');
+  const dot=(t,col,fill)=>{const[x,y]=at(t);return `<circle cx="${x}" cy="${y}" r="7.5" fill="${fill?col:'#f4ecd8'}" stroke="${col}" stroke-width="2.4"/>`;};
+  s+=dot(lo(prim),'#2b6b6b',false)+dot(lo(trans),'#2b6b6b',true)+dot(up(prim),'#9b2d2d',false)+dot(up(trans),'#9b2d2d',true);
+  return s+`</svg>`;
+}
+
+/* ---------- render ---------- */
+let reading=[null,null,null,null,null,null];   // empieza en blanco
+function partialHex(){
+  let rows='';
+  for(let i=5;i>=0;i--){ const v=reading[i];
+    if(v===null){ rows+=`<div class="hln" style="height:14px"><span style="width:64px;height:8px;border:1.5px dashed #cdbb90;border-radius:2px;box-sizing:border-box"></span><span class="mvmark" style="right:-26px;color:#b7ad90;font-size:12px">${i+1}</span></div>`; }
+    else{ const yang=(v===7||v===9), mv=(v===6||v===9);
+      const mk=mv?`<span class="mvmark" style="right:-18px">✳</span>`:'';
+      if(yang) rows+=`<div class="hln" style="height:14px"><span class="bar" style="width:64px;height:6px"></span>${mk}</div>`;
+      else rows+=`<div class="hln" style="height:14px"><span class="bar" style="width:26px;height:6px"></span><span style="width:14px"></span><span class="bar" style="width:26px;height:6px"></span>${mk}</div>`;
+    }
+  }
+  return `<div class="hx" style="margin:14px auto">${rows}</div>`;
+}
+function buildingCard(filled){
+  const rem=6-filled;
+  return `<div class="card" style="text-align:center">
+    <div class="tag" style="display:block">Tu hexagrama se construye de abajo hacia arriba</div>
+    ${partialHex()}
+    <p class="narr" style="text-align:center">Marca cada línea según tu oráculo, empezando por la <b>línea 1 (la de abajo)</b> y subiendo hasta la 6.
+    ${rem>0?`Faltan <b>${rem}</b> línea${rem>1?'s':''}.`:''} También puedes pulsar <i>Consultar</i> para una tirada al azar.</p>
+  </div>`;
+}
+function render(){
+  const filled=reading.filter(x=>x!==null).length;
+  if(filled<6){ document.getElementById('out').innerHTML=buildingCard(filled); return; }
+  const A=analyze(reading);
+  const cls=cellprob(A.k,A.D);
+  const dnuc=val2pos(nuclear(nuclear(A.prim)));
+  const dnucT=val2pos(nuclear(nuclear(A.trans)));
+  const nuc=val2pos(nuclear(A.prim));
+  const out=document.getElementById('out');
+  const movingBitsPrim=A.M; // 0-indexed
+  out.innerHTML = `
+   <h2>HOY → MAÑANA</h2>
+   <div class="card"><div class="figpair">
+      ${figBlock(A.prim,movingBitsPrim,'Hoy · tu situación')}
+      <div class="arrow">→</div>
+      ${figBlock(A.trans,[],'Hacia dónde va')}
+   </div>
+   <p class="narr">${narrative(A)}</p>
+   ${A.D? `<div class="lineread"><div class="tag">Lectura estructural de las líneas móviles</div>
+       ${A.M.map(i=>lineReading(A.prim,i+1,reading[i])).join('')}
+       <p class="fine">Lectura estructural propia (posición, centro 中, corrección 正, respuesta 應). No es traducción de ningún autor; el texto tradicional en palabras la complementa.</p></div>`:''}
+   </div>
+
+   <h2>Tu lugar en el cosmos</h2>
+   <div class="card"><div class="stats">
+     <div class="st"><div class="k">Líneas móviles (D)</div><div class="v">${A.D} &nbsp;<span style="color:var(--mut);font-size:13px">${A.M.map(i=>i+1).join(', ')||'—'}</span></div></div>
+     <div class="st"><div class="k">Cuenta de yang (k)</div><div class="v">${A.k} / 6</div></div>
+     <div class="st"><div class="k">Distancia HOY→MAÑANA</div><div class="v">${A.D} paso${A.D!==1?'s':''}</div></div>
+     <div class="st"><div class="k">Clase 7×7 (k,D)</div><div class="v">(${A.k}, ${A.D}) · ${cls.toFixed(2)}%</div></div>
+     <div class="st"><div class="k">Sesgo del cambio (n9−n6)</div><div class="v">${A.B>0?'+':''}${A.B} ${A.B>0?'→ yin':A.B<0?'→ yang':'· neutro'}</div></div>
+     <div class="st"><div class="k">互卦 nuclear · cuenca HOY</div><div class="v">#${nuc} · #${dnuc}</div></div>
+     <div class="st"><div class="k">Cuenca profunda · HOY→MAÑANA</div><div class="v">#${dnuc} → #${dnucT} <span style="color:var(--mut);font-size:12px">(1 de 16)</span></div></div>
+   </div></div>
+
+   <h2>La dinámica estructural · nuestra voz: axial y direccional</h2>
+   <div class="card">
+     <p class="narr" style="margin-top:0">Cada trigrama es <b>axial</b> —un polo anclado que no cambia al voltearse: Cielo, Tierra, Fuego o Agua— o <b>direccional</b> —Trueno, Montaña, Lago o Viento, en movimiento, inclinado hacia su reverso—. El eje horizontal es la temperatura: cuánto yang lleva. Todo aquí se calcula; nada se interpreta.</p>
+     ${axMap(A.prim,A.trans)}
+     <div class="legend"><span><span class="dotL" style="background:#2b6b6b"></span>fase interior (formación)</span>
+       <span><span class="dotL" style="background:#9b2d2d"></span>fase exterior (realización)</span>
+       <span>○ hoy &nbsp; ● mañana &nbsp;·&nbsp; ⃝ axial anclado &nbsp; --- reverso (flip)</span></div>
+     ${axReading(A.prim,A.trans)}
+     <div class="dyn2">${axCol('Hoy',A.prim)}${axCol('Hacia dónde va',A.trans)}</div>
+   </div>
+
+   <h2>Otra lente, para comparar: el ciclo de sistemas</h2>
+   <div class="card">
+     <p class="fine" style="margin-top:0">Lente interpretativa moderna (la "disposición de sistemas"), <b>no</b> un resultado estructural. La ponemos al lado para que compares con la nuestra.</p>
+     ${dynTrack(A.prim,A.trans)}
+     <div class="legend"><span><span class="dotL" style="background:#2b6b6b"></span>fase interior</span>
+       <span><span class="dotL" style="background:#9b2d2d"></span>fase exterior</span>
+       <span>○ hoy &nbsp; ● mañana</span></div>
+     <div class="dyn2">
+       ${dynCol('Hoy',A.prim)}
+       ${dynCol('Hacia dónde va',A.trans)}
+     </div>
+   </div>
+
+   <h2>La telaraña de la vida</h2>
+   <div class="card">${webSVG(A.prim,A.M)}</div>
+  `;
+}
+function dynCol(label,v){
+  const lo=v&7, up=(v>>3)&7;
+  return `<div class="dyncol"><div class="h">${label}</div>
+    <div class="tri">interior ${TRI[lo][1]} <b>${TRI[lo][0]}</b> — ${QUAL[lo]} <span style="color:var(--mut)">(${SEASON[lo]})</span></div>
+    <div class="tri">exterior ${TRI[up][1]} <b>${TRI[up][0]}</b> — ${QUAL[up]} <span style="color:var(--mut)">(${SEASON[up]})</span></div></div>`;
+}
+
+/* ---------- input UI ---------- */
+const OPTS=[[9,'9 · yang mutante ✳'],[7,'7 · yang'],[8,'8 · yin'],[6,'6 · yin mutante ✳']];
+function buildInput(){
+  const box=document.getElementById('lines'); box.innerHTML='';
+  for(let li=6;li>=1;li--){ const i=li-1;
+    const row=document.createElement('div'); row.className='lrow';
+    row.innerHTML=`<div class="llab">línea ${li}</div>`;
+    const opts=document.createElement('div'); opts.className='opts';
+    OPTS.forEach(([val,lab])=>{ const b=document.createElement('div');
+      const mv=(val===6||val===9);
+      b.className='opt'+(reading[i]===val?' sel'+(mv?' mv':''):'');
+      b.textContent=lab; b.onclick=()=>{ reading[i]=val; buildInput(); render(); };
+      opts.appendChild(b); });
+    row.appendChild(opts); box.appendChild(row);
+  }
+}
+function randPick(weights){ // weights: {val:prob}
+  const r=Math.random(); let a=0; for(const [v,p] of weights){ a+=p; if(r<a) return v; } return weights[weights.length-1][0]; }
+function randomYarrow(){ const W=[[6,1/16],[7,5/16],[8,7/16],[9,3/16]]; reading=Array.from({length:6},()=>randPick(W)); buildInput(); render(); }
+function randomCoins(){ const W=[[6,1/8],[7,3/8],[8,3/8],[9,1/8]]; reading=Array.from({length:6},()=>randPick(W)); buildInput(); render(); }
+function setExample(){ reading=[9,9,8,8,6,7]; buildInput(); render(); }
+function limpiar(){ reading=[null,null,null,null,null,null]; buildInput(); render(); }
+
+/* ---------- TAB "Los caminos": creative mutation between two hexagrams ---------- */
+function showTab(name){
+  document.getElementById('tab-consulta').style.display = name==='consulta'?'':'none';
+  document.getElementById('tab-caminos').style.display  = name==='caminos'?'':'none';
+  document.getElementById('tb-consulta').classList.toggle('active',name==='consulta');
+  document.getElementById('tb-caminos').classList.toggle('active',name==='caminos');
+}
+let fromPos=null,toPos=null;
+function buildSelects(){
+  let html='<option value="">— elige un hexagrama —</option>';
+  for(let p=1;p<=64;p++) html+=`<option value="${p}">${p} · ${NAME[p][0]} — ${NAME[p][1]}</option>`;
+  const sf=document.getElementById('selFrom'), st=document.getElementById('selTo');
+  sf.innerHTML=html; st.innerHTML=html; sf.value=fromPos||''; st.value=toPos||'';
+  sf.onchange=()=>{fromPos=sf.value?+sf.value:null; renderPath();};
+  st.onchange=()=>{toPos=st.value?+st.value:null; renderPath();};
+}
+function preset(a,b){ fromPos=a; toPos=b; document.getElementById('selFrom').value=a; document.getElementById('selTo').value=b; renderPath(); }
+function borrarCaminos(){ fromPos=null; toPos=null; renderPath(); }
+function useHoy(){ if(reading.includes(null)){ alert('Primero completa tu tirada en la pestaña «Consulta oracular».'); return; } const A=analyze(reading); fromPos=val2pos(A.prim); document.getElementById('selFrom').value=fromPos; renderPath(); }
+let caminoMode='mut';
+function setMode(m){ caminoMode=m; renderPath(); }
+function renderPath(){
+  const sf=document.getElementById('selFrom'), st=document.getElementById('selTo');
+  if(sf) sf.value=fromPos||''; if(st) st.value=toPos||'';
+  if(!fromPos || !toPos){
+    document.getElementById('figFrom').innerHTML=''; document.getElementById('figTo').innerHTML='';
+    document.getElementById('pathout').innerHTML='<div class="card" style="text-align:center"><p class="narr" style="text-align:center">Elige un hexagrama de <b>origen</b> (Desde) y uno de <b>destino</b> (Hasta) —con los menús o con un ejemplo— y te mostraré los caminos entre ellos.</p></div>';
+    return;
+  }
+  const fv=KW[fromPos-1], tv=KW[toPos-1];
+  document.getElementById('figFrom').innerHTML=hexHTML(fv,{scale:.8});
+  document.getElementById('figTo').innerHTML=hexHTML(tv,{scale:.8});
+  document.getElementById('pathout').innerHTML = caminoMode==='mut'? pathPanel(fv,tv) : transPanel(fv,tv);
+}
+function transPanel(fv,tv){
+  const fp=val2pos(fv),tp=val2pos(tv), kf=popcount(fv),kt=popcount(tv);
+  let s=`<h2>El camino · transposición · de #${fp} a #${tp}</h2><div class="card">`;
+  s+=`<div class="figpair">${figBlock(fv,[],'Desde')}<div class="arrow">→</div>${figBlock(tv,[],'Hasta')}</div>`;
+  if(fv===tv){ return s+`<p class="narr">Origen y destino son la misma figura.</p></div>`; }
+  if(kf!==kt){
+    return s+`<p class="narr">La <b>transposición</b> sube o baja líneas dentro del hexagrama sin crear ni destruir yang: <b>conserva la cuenta de yang</b>. Aquí #${fp} tiene <b>${kf}</b> líneas yang y #${tp} tiene <b>${kt}</b>; como difieren, <span class="em">no se puede llegar solo transponiendo</span>. Para este viaje usa el modo <i>Mutación</i>.</p></div>`;
+  }
+  const P=[],Q=[]; for(let i=0;i<6;i++){ const a=(fv>>i)&1,b=(tv>>i)&1; if(a&&!b)P.push(i); else if(!a&&b)Q.push(i); }
+  const m=P.length; P.sort((a,b)=>a-b); Q.sort((a,b)=>a-b);
+  let v=fv,route=[fv],swaps=[];
+  for(let i=0;i<m;i++){ v^=(1<<P[i]); v^=(1<<Q[i]); route.push(v); swaps.push(`${P[i]+1}↔${Q[i]+1}`); }
+  const routeHTML=route.map((x,idx)=>`<div class="rstep">${hexHTML(x,{scale:.6})}<div class="no">${val2pos(x)}. ${NAME[val2pos(x)][0]}</div></div>${idx<route.length-1?'<div class="rar">⇅</div>':''}`).join('');
+  const paths=fact(m)*fact(m);
+  s+=`<div class="stats" style="margin-top:8px">
+      <div class="st"><div class="k">Transposiciones</div><div class="v">${m}</div></div>
+      <div class="st"><div class="k">Caminos mínimos</div><div class="v">${paths}</div></div>
+      <div class="st"><div class="k">Mismo grupo de yang</div><div class="v">k = ${kf} ✓</div></div>
+     </div>`;
+  s+=`<p class="narr">Para ir de <b>${fp}. ${NAME[fp][0]}</b> a <b>${tp}. ${NAME[tp][0]}</b> por transposición hacen falta <b>${m}</b> intercambio${m>1?'s':''} de líneas opuestas (${swaps.join(', ')}). Como el yang se conserva, ambas figuras viven en el mismo grupo (k=${kf}).</p>`;
+  s+=`<div class="route"><div class="tag">Camino canónico · un intercambio a la vez</div><div class="routerow">${routeHTML}</div></div>`;
+  s+=`<p class="fine">La transposición sube o baja líneas sin crear ni destruir yang; por eso solo enlaza figuras del mismo grupo (misma k) y no tiene "cuesta arriba / abajo". Un intercambio de dos líneas opuestas = <b>un paso</b>: p. ej., 11→63 intercambiando las líneas 2 y 5 (la vía de Huang) es <b>una sola</b> transposición, no dos.</p></div>`;
+  return s;
+}
+function pathWeb(fv,M){
+  const D=M.length;
+  const subsets=[]; for(let m=0;m<(1<<D);m++)subsets.push(m);
+  const byRank={}; subsets.forEach(m=>{const r=popcount(m);(byRank[r]=byRank[r]||[]).push(m);});
+  const colGap=Math.max(150,Math.min(200,760/D)),rowGap=64,padx=70;
+  const maxRow=Math.max(...Object.values(byRank).map(a=>a.length));
+  const W=padx*2+D*colGap,H=80+(maxRow-1)*rowGap+40, pos={};
+  for(let r=0;r<=D;r++){const arr=byRank[r];arr.forEach((m,idx)=>{pos[m]=[padx+r*colGap, H/2+(idx-(arr.length-1)/2)*rowGap];});}
+  const val=m=>{let v=fv;M.forEach((li,j)=>{if(m&(1<<j))v^=(1<<li);});return v;};
+  const order=M.map((li,j)=>j).sort((a,b)=>M[a]-M[b]); const canon=new Set([0]); let cur=0; order.forEach(j=>{cur|=(1<<j);canon.add(cur);});
+  let s=`<div class="webwrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" preserveAspectRatio="xMinYMid meet">`;
+  subsets.forEach(a=>{for(let j=0;j<D;j++){ if(!(a&(1<<j))){ const b=a|(1<<j);
+    const [x1,y1]=pos[a],[x2,y2]=pos[b]; const easy=((fv>>M[j])&1)===1; const ce=canon.has(a)&&canon.has(b);
+    const col= easy ? (ce?'#20242b':'#bdb7a6') : (ce?'#9b2d2d':'#e2b3b3');
+    s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${ce?3.4:1.3}"/>`; }}});
+  subsets.forEach(m=>{const[x,y]=pos[m];const v=val(m),p=val2pos(v);const on=canon.has(m);
+    s+=miniHex(x,y,v,on); s+=`<text x="${x}" y="${y+30}" text-anchor="middle" font-size="12" fill="${on?'#9b2d2d':'#6a6047'}">${p}</text>`;});
+  s+=`</svg></div><p class="fine"><b style="color:#20242b">Negro = paso fácil</b> (cuesta abajo, yang→yin, barato) · <b style="color:#9b2d2d">Carmesí = paso difícil</b> (cuesta arriba, yin→yang, costoso). Trazo grueso = camino canónico.</p>`;
+  return s;
+}
+function pathPanel(fv,tv){
+  const fp=val2pos(fv),tp=val2pos(tv), diff=fv^tv, M=[]; for(let i=0;i<6;i++) if((diff>>i)&1) M.push(i);
+  const D=M.length;
+  if(D===0) return `<h2>El camino</h2><div class="card"><p class="narr">Origen y destino son el mismo hexagrama (<b>#${fp}. ${NAME[fp][0]}</b>): ya estás donde quieres ir.</p></div>`;
+  const down=M.filter(i=>(fv>>i)&1).map(i=>i+1), up=M.filter(i=>!((fv>>i)&1)).map(i=>i+1);
+  let v=fv,route=[fv]; M.slice().sort((a,b)=>a-b).forEach(i=>{v^=(1<<i);route.push(v);});
+  const routeHTML=route.map((x,idx)=>`<div class="rstep">${hexHTML(x,{scale:.6})}<div class="no">${val2pos(x)}. ${NAME[val2pos(x)][0]}</div></div>${idx<route.length-1?'<div class="rar">→</div>':''}`).join('');
+  let s=`<h2>El camino · de #${fp} a #${tp}</h2><div class="card">`;
+  s+=`<div class="figpair">${figBlock(fv,[],'Desde')}<div class="arrow">→</div>${figBlock(tv,[],'Hasta')}</div>`;
+  s+=`<div class="stats" style="margin-top:8px">
+      <div class="st"><div class="k">Distancia</div><div class="v">${D} línea${D>1?'s':''}</div></div>
+      <div class="st"><div class="k">Caminos posibles</div><div class="v">${fact(D)}</div></div>
+      <div class="st"><div class="k">Figuras intermedias</div><div class="v">${1<<D}</div></div>
+      <div class="st"><div class="k">Fácil · yang→yin (negro)</div><div class="v">${down.length?'líneas '+down.join(', '):'—'}</div></div>
+      <div class="st"><div class="k">Difícil · yin→yang (carmesí)</div><div class="v">${up.length?'líneas '+up.join(', '):'—'}</div></div>
+     </div>`;
+  s+=`<p class="narr">Para ir de <b>${fp}. ${NAME[fp][0]}</b> a <b>${tp}. ${NAME[tp][0]}</b> hay que cambiar <b>${D}</b> línea${D>1?'s':''}, y existen <b>${fact(D)}</b> órdenes de hacerlo (con ${1<<D} figuras intermedias). ${down.length&&up.length?`De esos cambios, <b>${down.length} van cuesta abajo</b> (yang que cae a yin — el paso barato, tres veces más natural) y <b>${up.length} cuesta arriba</b> (yin que sube a yang — el costoso).`:down.length?'Todos van <span class="em">cuesta abajo</span> (yang→yin): el descenso natural.':'Todos van <span class="em">cuesta arriba</span> (yin→yang): el ascenso costoso.'}</p>`;
+  s+=pathWeb(fv,M);
+  s+=`<div class="route"><div class="tag">Camino canónico · cambiar de abajo hacia arriba</div><div class="routerow">${routeHTML}</div></div>`;
+  s+=`<p class="fine">La idea de ir a conciencia de un hexagrama a otro es de Larry Schoenholtz ("mutación creativa"); la telaraña de caminos y el coste por entropía (yang→yin es 3× más barato) son nuestra lectura estructural.</p></div>`;
+  return s;
+}
+
+buildInput(); render(); buildSelects(); renderPath();
+</script>
+</body>
+</html>
