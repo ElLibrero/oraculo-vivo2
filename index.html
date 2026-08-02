@@ -181,6 +181,37 @@ function figBlock(value,movingBits,label){
     <div class="nm"><b>${p}. ${n[0]}</b></div><div class="no">${n[1]}</div></div>`;
 }
 
+/* ---------- La PAREJA del Rey Wen (nuestro hallazgo: el libro se lee de dos en dos) ---------- */
+function hua(v){ let r=0; for(let i=0;i<6;i++) r|=((v>>i)&1)<<(5-i); return r; }   // vuelco (綜)
+function comp(v){ return v^63; }                                                  // opuesto / bian (变)
+function kwPair(v){ const f=hua(v); const pal=(f===v); return {partner: pal?comp(v):f, pal}; }
+function parejaBlock(v,title,leftLabel){
+  const p=val2pos(v), pr=kwPair(v), pp=val2pos(pr.partner), pairNo=Math.ceil(p/2);
+  const m=NAME[pp];
+  const rel = pr.pal? 'por opuesto · bian 变' : 'por vuelco · hua 综';
+  const sym = pr.pal? '⇄' : '⇅';
+  const voice = pr.pal
+    ? `Tú te ves igual puesto de cabeza —eres de los <b>ocho</b> hexagramas a los que el vuelco no altera—, así que el Rey Wen no te ató a un reflejo sino a tu <b>opuesto exacto</b>, <b>#${pp} ${m[0]}</b> — tu espejo en negativo. Donde tú tienes luz, tu pareja tiene sombra; juntos completan los seis trazos.`
+    : `<b>#${pp} ${m[0]}</b> — ${m[1]} — es tu <b>vuelco</b>: la misma figura puesta de cabeza. Lo que en ti empuja hacia arriba, en tu pareja desciende. El Rey Wen las talló como un solo respiro de ida y vuelta.`;
+  return `<div style="border-top:1px dashed var(--line);padding-top:12px;margin-top:12px">
+    <div class="tag" style="display:block">${title} · par ${pairNo} de 32 · ${rel}</div>
+    <div class="figpair">
+      ${figBlock(v,[],leftLabel)}
+      <div class="arrow" style="color:var(--gold)">${sym}</div>
+      ${figBlock(pr.partner,[],'su pareja')}
+    </div>
+    <p class="narr">${voice}</p></div>`;
+}
+function parejaSection(A){
+  let inner = parejaBlock(A.prim,'Tu HOY','hoy');
+  if(A.trans!==A.prim) inner += parejaBlock(A.trans,'Tu MAÑANA','mañana');
+  return `<h2>La pareja del Rey Wen · nadie se lee solo</h2>
+   <div class="card">
+     <p class="narr" style="margin-top:0">En el orden del Rey Wen los hexagramas no viajan solos: marchan en <b>32 parejas</b>, y así está pensado el libro desde su primera página — se lee <b>de dos en dos</b>. Cada figura va encadenada a su gemela: su <b>vuelco</b> (puesta de cabeza) o, si al voltearse no cambia, su <b>opuesto</b>.</p>
+     ${inner}
+   </div>`;
+}
+
 /* ---------- dynamics track: the real sine wave of the life-cycle ---------- */
 function dynTrack(prim,trans){
   const lo=v=>v&7, up=v=>(v>>3)&7;
@@ -397,6 +428,8 @@ function render(){
        ${A.M.map(i=>lineReading(A.prim,i+1,reading[i])).join('')}
        <p class="fine">Lectura estructural propia (posición, centro 中, corrección 正, respuesta 應). No es traducción de ningún autor; el texto tradicional en palabras la complementa.</p></div>`:''}
    </div>
+
+   ${parejaSection(A)}
 
    <h2>Tu lugar en el cosmos</h2>
    <div class="card"><div class="stats">
