@@ -212,6 +212,32 @@ function parejaSection(A){
    </div>`;
 }
 
+/* ---------- El Paradigma de la pareja (idea: Karcher; lectura estructural: nuestra) ---------- */
+function shellLine(kv){
+  if(kv===6) return `Con <b>6 yang</b> ya eres plenitud (Qián): no hay fila con más yang que te impulse; solo la fila de <b>5 yang</b> te descarga hacia el mundo.`;
+  if(kv===0) return `Con <b>0 yang</b> ya eres vacío (Kūn): no hay fila con menos yang; solo la fila de <b>1 yang</b> te impulsa con la primera chispa.`;
+  return `Con <b>${kv} yang</b>, te impulsa la fila de <b>${kv+1} yang</b> (su <i>motivación</i>: reunir una línea) y te descarga la fila de <b>${kv-1} yang</b> (su <i>intercambio</i>: gastar una línea con el mundo).`;
+}
+function paradigmaBlock(v){
+  const p=val2pos(v), pr=kwPair(v), pp=val2pos(pr.partner), pairNo=Math.ceil(p/2);
+  const a=NAME[p], b=NAME[pp];
+  const npV=val2pos(nuclear(v)), npP=val2pos(nuclear(pr.partner));
+  const cuenca=val2pos(nuclear(nuclear(v)));
+  const sA=65-p, sB=65-pp;
+  const kv=popcount(v);
+  const alma = pr.pal? 'la luz y su sombra, que juntas completan los seis trazos' : 'la misma escena vista desde el otro lado';
+  return `<h2>El Paradigma de la pareja · el campo que crean juntos</h2>
+   <div class="card">
+     <p class="narr" style="margin-top:0"><b>Par ${pairNo} de 32 · «${a[1]} y ${b[1]}»</b> — ${a[0]} y ${b[0]}. Esta pareja te sitúa en un solo campo, dos caras de un mismo momento: ${alma}.</p>
+     <div class="lineread" style="border-top:none;padding-top:0">
+       <div class="lr"><b>Memoria oculta · 互卦 nuclear</b> — la pareja brota de <b>#${npV} ${NAME[npV][0]}</b> · <b>#${npP} ${NAME[npP][0]}</b>, y al profundizar (再互) desemboca en su <b>cuenca #${cuenca} ${NAME[cuenca][0]}</b>: el fondo último del que todo aquí nace.</div>
+       <div class="lr"><b>Sombra · 65−N</b> — su reflejo especular en el libro es la pareja <b>#${sA}–#${sB}</b> (${NAME[sA][0]}, ${NAME[sB][0]}); lo que esta pareja calla, aquella lo guarda.</div>
+       <div class="lr"><b>Cáscaras vecinas · tabla 7×7</b> — ${shellLine(kv)}</div>
+     </div>
+     <p class="fine">La idea del «Paradigma» —leer la pareja como un solo campo— es de <b>Stephen Karcher</b> (<i>Total I Ching</i>). La lectura estructural (nuclear 互卦, cuenca 再互, sombra 65−N, cáscaras) es nuestra: verificamos que su “Shadow site” es exactamente nuestra Sombra, y sus “Hidden Possibilities”, nuestro nuclear → cuenca.</p>
+   </div>`;
+}
+
 /* ---------- dynamics track: the real sine wave of the life-cycle ---------- */
 function dynTrack(prim,trans){
   const lo=v=>v&7, up=v=>(v>>3)&7;
@@ -430,6 +456,8 @@ function render(){
    </div>
 
    ${parejaSection(A)}
+
+   ${paradigmaBlock(A.prim)}
 
    <h2>Tu lugar en el cosmos</h2>
    <div class="card"><div class="stats">
