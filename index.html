@@ -184,15 +184,23 @@ function figBlock(value,movingBits,label){
 /* ---------- La PAREJA del Rey Wen (nuestro hallazgo: el libro se lee de dos en dos) ---------- */
 function hua(v){ let r=0; for(let i=0;i<6;i++) r|=((v>>i)&1)<<(5-i); return r; }   // vuelco (綜)
 function comp(v){ return v^63; }                                                  // opuesto / bian (变)
+function pick(a,s){ return a[((s%a.length)+a.length)%a.length]; }                 // variación determinista
 function kwPair(v){ const f=hua(v); const pal=(f===v); return {partner: pal?comp(v):f, pal}; }
 function parejaBlock(v,title,leftLabel){
   const p=val2pos(v), pr=kwPair(v), pp=val2pos(pr.partner), pairNo=Math.ceil(p/2);
   const m=NAME[pp];
   const rel = pr.pal? 'por opuesto · bian 变' : 'por vuelco · hua 综';
   const sym = pr.pal? '⇄' : '⇅';
-  const voice = pr.pal
-    ? `Tú te ves igual puesto de cabeza —eres de los <b>ocho</b> hexagramas a los que el vuelco no altera—, así que el Rey Wen no te ató a un reflejo sino a tu <b>opuesto exacto</b>, <b>#${pp} ${m[0]}</b> — tu espejo en negativo. Donde tú tienes luz, tu pareja tiene sombra; juntos completan los seis trazos.`
-    : `<b>#${pp} ${m[0]}</b> — ${m[1]} — es tu <b>vuelco</b>: la misma figura puesta de cabeza. Lo que en ti empuja hacia arriba, en tu pareja desciende. El Rey Wen las talló como un solo respiro de ida y vuelta.`;
+  const vuelco=[
+    `<b>#${pp} ${m[0]}</b> — ${m[1]} — es tu <b>vuelco</b>: tú, puesto de cabeza. Lo que en ti asciende, en tu pareja desciende.`,
+    `Dale la vuelta y aparece <b>#${pp} ${m[0]}</b> (${m[1]}): tu <b>vuelco</b>, la misma escena mirada desde el otro extremo.`,
+    `Tu gemela es <b>#${pp} ${m[0]}</b> — ${m[1]}: tu <b>vuelco</b>, la figura invertida de arriba abajo, tu reverso exacto.`,
+    `Voltéate y eres <b>#${pp} ${m[0]}</b> (${m[1]}): tu <b>vuelco</b>. Donde tú subes, ella baja.`];
+  const opuesto=[
+    `Te ves igual de cabeza —de los <b>ocho</b> palíndromos—, así que tu pareja no es tu vuelco sino tu <b>opuesto</b>: <b>#${pp} ${m[0]}</b>, tu negativo, luz contra sombra.`,
+    `Eres simétrico al voltearte (de los <b>ocho</b>): por eso el Rey Wen te ató a tu <b>opuesto exacto</b>, <b>#${pp} ${m[0]}</b>, tu contrario línea a línea.`,
+    `De los <b>ocho</b> que no cambian al invertirse: tu pareja es tu <b>opuesto</b>, <b>#${pp} ${m[0]}</b> — tu espejo en negativo.`];
+  const voice = pr.pal ? pick(opuesto,p) : pick(vuelco,p);
   return `<div style="border-top:1px dashed var(--line);padding-top:12px;margin-top:12px">
     <div class="tag" style="display:block">${title} · par ${pairNo} de 32 · ${rel}</div>
     <div class="figpair">
@@ -289,14 +297,15 @@ function lineReading(prim,pos,val){
   if(central) t+=`, y ocupa el <b>centro (中)</b> de su trigrama`;
   t+=`. Está ${correct?'<b>en su lugar correcto (正)</b>':'fuera de su lugar (no 正)'}, y ${responds?`halla respuesta en la línea ${partner} <b>(應)</b>`:`no halla respuesta en la línea ${partner}`}.`;
   if(pos===5) t+=` Es la línea soberana: la que rige la figura.`;
-  t+=` Al moverse, empuja el cambio hacia MAÑANA.</div>`;
+  const closers=[' Al moverse, inclina la situación hacia MAÑANA.',' Su temblor es lo que abre el paso a MAÑANA.',' Al mutar, deja caer el cambio.',' Es una de las puertas por donde HOY se vuelve MAÑANA.',' Su vuelco es parte del tránsito.'];
+  t+=`${pick(closers,pos*7+val)}</div>`;
   return t;
 }
 
 /* ---------- the web (Boolean hypercube of moving lines) ---------- */
 function webSVG(prim,M){
   const D=M.length;
-  if(D===0) return `<p class="narr">No hay líneas móviles: <span class="em">HOY es idéntico a MAÑANA</span>. La situación es estable, se sostiene sola y se lee entera en una sola figura.</p>`;
+  if(D===0) return `<p class="narr">No hay líneas móviles: <span class="em">el dihexagrama reposa en la diagonal HOY = MAÑANA</span>. No hay desplazamiento, pero el hexagrama no está solo: sigue perteneciendo a su <b>pareja canónica</b>, que es su campo completo de sentido.</p>`;
   // nodes = subsets of M; rank = popcount
   const subsets=[]; for(let m=0;m<(1<<D);m++)subsets.push(m);
   const byRank={}; subsets.forEach(m=>{const r=popcount(m);(byRank[r]=byRank[r]||[]).push(m);});
@@ -343,7 +352,7 @@ function narrative(A){
   const dirLine = A.B>0? 'hacia el <span class="em">yin</span> (descarga de lo lleno)' : A.B<0? 'hacia el <span class="em">yang</span> (crecimiento de lo activo)' : 'en <span class="em">equilibrio</span> (sin sesgo de dirección)';
   const move = w=> w<0? 'retrocede en el ciclo (se enfría / rebobina)': w>0? 'avanza en el ciclo (madura / se realiza)':'permanece en su fase';
   let t = `Tu situación <b>HOY</b> es <b>${val2pos(A.prim)}. ${NAME[val2pos(A.prim)][0]}</b> — ${NAME[val2pos(A.prim)][1]}. `;
-  if(A.D===0){ t+='Ninguna línea tiembla: la situación es estable y no se mueve. HOY y mañana coinciden.'; return t; }
+  if(A.D===0){ t+='Ninguna línea tiembla: el dihexagrama reposa en la diagonal HOY = MAÑANA. No hay mutación, pero el hexagrama sigue perteneciendo a su pareja canónica, su campo de sentido.'; return t; }
   t+=`${A.D} línea${A.D>1?'s':''} en trance la empuja${A.D>1?'n':''} hacia <b>${val2pos(A.trans)}. ${NAME[val2pos(A.trans)][0]}</b> — ${NAME[val2pos(A.trans)][1]}, a ${A.D} paso${A.D>1?'s':''} sobre el mapa. `;
   t+=`El cambio se inclina ${dirLine}. `;
   t+=`En la dinámica de los trigramas, tu fase interior (de formación) ${move(di)}, y tu fase exterior (de realización) ${move(de)}.`;
